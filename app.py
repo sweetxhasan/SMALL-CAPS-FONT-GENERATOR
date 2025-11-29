@@ -83,7 +83,7 @@ async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     about_text = """
 ℹ️ **About Small Caps Bot**
 
-📱 **Version:** 1.0
+📱 **Version:** 2.0
 🐍 **Language:** Python
 🛠 **Framework:** python-telegram-bot
 ☁️ **Host:** Render
@@ -94,8 +94,7 @@ async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 • Support for all English characters
 • Clean and modern font style
 
-📞 **Developer:** @YourName
-🔗 **Source Code:** GitHub
+🔧 **Fixed:** Deployment issues resolved
     """
     await update.message.reply_text(about_text)
 
@@ -129,35 +128,46 @@ def main():
     # বট টোকেন
     TOKEN = "8011981998:AAGrdUuUyMSPU_Jpa02rnuQzUkqwxDZ79rM"
     
-    # অ্যাপ্লিকেশন তৈরি করুন
-    application = Application.builder().token(TOKEN).build()
-    
-    # কমান্ড হ্যান্ডলার
-    application.add_handler(CommandHandler("start", start_command))
-    application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("about", about_command))
-    
-    # মেসেজ হ্যান্ডলার
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    
-    # এরর হ্যান্ডলার
-    application.add_error_handler(error_handler)
-    
-    # Render-এ ডেপ্লয়মেন্টের জন্য পোর্ট সেটআপ
-    PORT = int(os.environ.get('PORT', 10000))
-    
-    # ওয়েবহুক সেটআপ (Production)
-    if 'RENDER' in os.environ:
-        WEBHOOK_URL = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}/{TOKEN}"
-        application.run_webhook(
-            listen="0.0.0.0",
-            port=PORT,
-            url_path=TOKEN,
-            webhook_url=WEBHOOK_URL
-        )
-    else:
-        # লোকাল ডেভেলপমেন্ট (Polling)
-        application.run_polling()
+    try:
+        # অ্যাপ্লিকেশন তৈরি করুন
+        application = Application.builder().token(TOKEN).build()
+        
+        # কমান্ড হ্যান্ডলার
+        application.add_handler(CommandHandler("start", start_command))
+        application.add_handler(CommandHandler("help", help_command))
+        application.add_handler(CommandHandler("about", about_command))
+        
+        # মেসেজ হ্যান্ডলার
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        
+        # এরর হ্যান্ডলার
+        application.add_error_handler(error_handler)
+        
+        # Render-এ ডেপ্লয়মেন্টের জন্য পোর্ট সেটআপ
+        PORT = int(os.environ.get('PORT', 10000))
+        
+        # Render এনভায়রনমেন্ট চেক করুন
+        if 'RENDER' in os.environ or 'PORT' in os.environ:
+            # Production - Webhook
+            webhook_url = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'your-app.onrender.com')}/{TOKEN}"
+            
+            # Start webhook
+            application.run_webhook(
+                listen="0.0.0.0",
+                port=PORT,
+                url_path=TOKEN,
+                webhook_url=webhook_url,
+                secret_token='WEBHOOK_SECRET'
+            )
+            logger.info("Bot running in production mode with webhook")
+        else:
+            # Development - Polling
+            application.run_polling()
+            logger.info("Bot running in development mode with polling")
+            
+    except Exception as e:
+        logger.error(f"Failed to start bot: {e}")
+        raise
 
 if __name__ == '__main__':
     main()
